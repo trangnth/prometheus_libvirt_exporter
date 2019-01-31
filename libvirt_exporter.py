@@ -33,7 +33,7 @@ def get_domains(conn):
         dom = conn.lookupByID(id)
 
         if dom == None:
-            print('Failed to find the domain ' + dom.name(), file=sys.stderr)
+            print('Failed to find the domain ' + dom.UUIDString(), file=sys.stderr)
         else:
             domains.append(dom)
 
@@ -71,11 +71,12 @@ def get_metrics_multidim_collections(dom, metric_names, device):
     for mn in metric_names:
         dimensions = []
         for target in targets:
-            labels = {'domain': dom.name()}
-            labels['target_device'] = target
+            labels = {'domain': dom.UUIDString()}
             if device == "interface":
+                labels['target_interface'] = target
                 stats = dom.interfaceStats(target) # !
             elif device == "disk":
+                labels['target_disk'] = target
                 stats= dom.blockStats(target)
             stats = dict(zip(metric_names, stats))
             dimension = [stats[mn], labels]
@@ -88,7 +89,7 @@ def get_metrics_multidim_collections(dom, metric_names, device):
 
 def add_metrics(dom, header_mn, g_dict):
 
-    labels = {'domain':dom.name()}
+    labels = {'domain':dom.UUIDString()}
 
     if header_mn == "libvirt_cpu_stats_":
 
@@ -163,7 +164,7 @@ def job(uri, g_dict, scheduler):
 
     for dom in domains:
 
-        print(dom.name())
+        print(dom.UUIDString())
 
         headers_mn = ["libvirt_cpu_stats_", "libvirt_mem_stats_", \
                       "libvirt_block_stats_", "libvirt_interface_"]
