@@ -1,0 +1,15 @@
+[Service]
+Restart=always
+TimeoutStartSec=0
+ExecStartPre=-/usr/bin/docker kill libvirt_exporter
+ExecStartPre=-/usr/bin/docker rm libvirt_exporter
+
+ExecStart=/usr/bin/docker run \
+--name libvirt_exporter \
+-v /var/run/libvirt/libvirt-sock:/var/run/libvirt/libvirt-sock \
+--net=host \
+-p=9177:9177 \
+libvirt-exporter
+
+ExecStop=-/usr/bin/docker kill libvirt_exporter
+ExecStop=-/usr/bin/docker rm libvirt_exporter
