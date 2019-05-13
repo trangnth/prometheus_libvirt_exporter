@@ -14,6 +14,7 @@ parser.add_argument('-uri','--uniform_resource_identifier', help='Libvirt Unifor
 args = vars(parser.parse_args())
 uri = args["uniform_resource_identifier"]
 
+last_values = {}
 
 def connect_to_uri(uri):
     conn = libvirt.open(uri)
@@ -87,16 +88,67 @@ def get_metrics_multidim_collections(dom, metric_names, device):
     return metrics_collection
 
 
+def custom_derivative(new, time_delta=True, interval=15,
+                      allow_negative=False, instance=None):
+    """
+    Calculate the derivative of the metric.
+    """
+    # Format Metric Path
+    path = instance
+
+    if path in last_values:
+        old = last_values[path]
+        # Check for rollover
+        if new < old:
+            # old = old - max_value
+            # Store Old Value
+            last_values[path] = new
+            # Return 0 if instance was rebooted
+            return 0
+        # Get Change in X (value)
+        derivative_x = new - old
+
+        # If we pass in a interval, use it rather then the configured one
+        if interval is None:
+            interval = float(interval)
+
+        # Get Change in Y (time)
+        if time_delta:
+            derivative_y = interval
+        else:
+            derivative_y = 1
+
+        result = float(derivative_x) / float(derivative_y)
+        if result < 0 and not allow_negative:
+            result = 0
+    else:
+        result = 0
+
+    # Store Old Value
+    last_values[path] = new
+
+    # Return result
+    return result
+
 def add_metrics(dom, header_mn, g_dict):
 
     labels = {'domain':dom.UUIDString()}
 
     if header_mn == "libvirt_cpu_stats_":
 
-        stats = dom.getCPUStats(True)
-        metric_names = stats[0].keys()
+        vcpus = dom.getCPUStats(True, 0)
+        totalcpu = 0
+        for vcpu in vcpus:
+            cputime = vcpu['cpu_time']
+            totalcpu += cputime
+
+        value = float(totalcpu / len(dom.vcpus()[0])) / 10000000.0
+        cpu_percent = custom_derivative(new=value, instance=dom.UUIDString())
+        # metric_names = stats[0].keys()
+        stats = [{'cpu_used': cpu_percent}]
+        metric_names = ['cpu_used']
         metrics_collection = get_metrics_collections(metric_names, labels, stats)
-        unit = "_nanosecs"
+        unit = "_percent"
 
     elif header_mn == "libvirt_mem_stats_":
         stats = dom.memoryStats()
