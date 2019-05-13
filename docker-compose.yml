@@ -1,0 +1,11 @@
+version: "2"
+services:
+  libvirt_exporter:
+    image: saphi/libvirt-exporter
+    network_mode: host
+    ports:
+    - 9177:9177
+    volumes:
+    - /var/run/libvirt/libvirt-sock:/var/run/libvirt/libvirt-sock
+    restart: always
+
