@@ -45,6 +45,17 @@ def get_domains(conn):
         return domains
 
 
+def get_labels(dom):
+    tree = ElementTree.fromstring(dom.XMLDesc())
+
+    ns = {'nova': 'http://openstack.org/xmlns/libvirt/nova/1.0'}
+
+    instance_name = tree.find('metadata').find('nova:instance', ns).find('nova:name', ns).text
+
+    labels = {'domain':dom.UUIDString() + '_' + instance_name}
+    return labels
+
+
 def get_metrics_collections(metric_names, labels, stats):
     dimensions = []
     metrics_collection = {}
@@ -72,7 +83,7 @@ def get_metrics_multidim_collections(dom, metric_names, device):
     for mn in metric_names:
         dimensions = []
         for target in targets:
-            labels = {'domain': dom.UUIDString()}
+            labels = get_labels(dom)
             if device == "interface":
                 labels['target_interface'] = target
                 stats = dom.interfaceStats(target) # !
@@ -132,7 +143,7 @@ def custom_derivative(new, time_delta=True, interval=15,
 
 def add_metrics(dom, header_mn, g_dict):
 
-    labels = {'domain':dom.UUIDString()}
+    labels = get_labels(dom)
 
     if header_mn == "libvirt_cpu_stats_":
 
